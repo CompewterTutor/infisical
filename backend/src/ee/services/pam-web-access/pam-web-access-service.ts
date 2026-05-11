@@ -425,12 +425,11 @@ export const pamWebAccessServiceFactory = ({
 
       if (session) {
         try {
-          await pamSessionDAL.updateById(session.id, {
-            status: PamSessionStatus.Ended,
-            endedAt: new Date()
-          });
+          await pamSessionDAL.endSessionById(session.id);
         } catch (err) {
           logger.debug(err, "Error marking session ended in cleanup");
+        } finally {
+          session = null;
         }
       }
 
@@ -617,6 +616,11 @@ export const pamWebAccessServiceFactory = ({
         });
       } else if (resource.resourceType === PamResource.Windows) {
         handlerResult = await handleRdpSession(ctx);
+      }
+
+      // RDP calls releaseEarlyBuffer() itself; detach for all other types
+      if (resource.resourceType !== PamResource.Windows) {
+        releaseEarlyBuffer();
       }
 
       // 7. ACTIVATE SESSION
