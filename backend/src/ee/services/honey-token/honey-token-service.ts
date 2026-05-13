@@ -857,9 +857,6 @@ export const honeyTokenServiceFactory = ({
     if (!honeyToken) {
       throw new NotFoundError({ message: `Honey token with ID "${honeyTokenId}" not found` });
     }
-    if (honeyToken.status === HoneyTokenStatus.Revoked) {
-      throw new BadRequestError({ message: "Cannot retrieve credentials for a revoked honey token" });
-    }
 
     const { permission: credentialPermission } = await permissionService.getProjectPermission({
       actor: actor.type,
@@ -873,6 +870,10 @@ export const honeyTokenServiceFactory = ({
       ProjectPermissionHoneyTokenActions.ReadCredentials,
       ProjectPermissionSub.HoneyTokens
     );
+
+    if (honeyToken.status === HoneyTokenStatus.Revoked) {
+      throw new BadRequestError({ message: "Cannot retrieve credentials for a revoked honey token" });
+    }
 
     const type = assertSupportedHoneyTokenType(honeyToken.type);
     const providerHooks = honeyTokenProviderHooksByType[type];
