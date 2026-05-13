@@ -11,11 +11,6 @@ export class DirtyRect {
     y: number;
 }
 
-export enum PduAction {
-    X224 = 0,
-    FastPath = 1,
-}
-
 /**
  * A decoder session tied to a specific desktop size. Create one per
  * replay, feed PDUs in original order, read out the framebuffer + dirty
@@ -69,8 +64,6 @@ export class RdpDecoder {
     width(): number;
 }
 
-export function start(): void;
-
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -94,13 +87,7 @@ export interface InitOutput {
     readonly rdpdecoder_new: (a: number, b: number) => number;
     readonly rdpdecoder_stride: (a: number) => number;
     readonly rdpdecoder_width: (a: number) => number;
-    readonly start: () => void;
-    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
-    readonly __wbindgen_exn_store: (a: number) => void;
-    readonly __externref_table_alloc: () => number;
-    readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __wbindgen_malloc: (a: number, b: number) => number;
-    readonly __wbindgen_start: () => void;
+    readonly __wbindgen_export: (a: number, b: number) => number;
 }
 
 export type SyncInitInput = BufferSource | WebAssembly.Module;

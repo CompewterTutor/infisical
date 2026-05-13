@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Loader2Icon, PauseIcon, PlayIcon, RotateCcwIcon } from "lucide-react";
 
 import { IconButton } from "@app/components/v3";
-import { TTerminalEvent } from "@app/hooks/api/pam";
+import { TSessionEvent } from "@app/hooks/api/pam";
 import { isBrokenChunkMarker } from "@app/hooks/api/pam/session-playback";
 
 import { parseRdpLogEntry, RdpEvent, RdpReplayPlayer } from "./rdpReplayPlayer";
@@ -17,12 +17,15 @@ const OUTER_ASPECT = OUTER_ASPECT_W / OUTER_ASPECT_H;
 
 const formatMs = (ms: number) => {
   const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
   const r = s % 60;
-  return `${m.toString().padStart(2, "0")}:${r.toString().padStart(2, "0")}`;
+  const mm = m.toString().padStart(2, "0");
+  const ss = r.toString().padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
 
-const parseRange = (events: TTerminalEvent[], start: number, end: number): RdpEvent[] => {
+const parseRange = (events: TSessionEvent[], start: number, end: number): RdpEvent[] => {
   const out: RdpEvent[] = [];
   for (let i = start; i < end; i += 1) {
     const ev = parseRdpLogEntry(events[i]);
@@ -32,7 +35,7 @@ const parseRange = (events: TTerminalEvent[], start: number, end: number): RdpEv
 };
 
 type Props = {
-  events: TTerminalEvent[];
+  events: TSessionEvent[];
   isStreaming?: boolean;
   totalDurationMs?: number;
 };
@@ -273,7 +276,7 @@ export const RdpReplayView = ({ events, isStreaming = false, totalDurationMs }: 
       </button>
       <div className="flex items-center gap-3">
         <IconButton
-          variant="warning"
+          variant="project"
           size="sm"
           onClick={onPlayPause}
           aria-label={isPlaying ? "Pause" : "Play"}

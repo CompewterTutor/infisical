@@ -85,6 +85,9 @@ export class RdpReplayPlayer {
   ): Promise<RdpReplayPlayer> {
     const wasm = await ensureWasm();
     const decoder = new RdpDecoder(canvas.width, canvas.height);
+    // Prime pointer position off-screen so the first server-emitted pointer
+    // bitmap doesn't paint at (0,0) before the first recorded mouse event.
+    decoder.move_pointer(0xffff, 0xffff);
     return new RdpReplayPlayer(events, canvas, callbacks, decoder, wasm);
   }
 
@@ -141,6 +144,7 @@ export class RdpReplayPlayer {
     // Frames are deltas, so replaying needs a fresh decoder state.
     this.decoder.free();
     this.decoder = new RdpDecoder(this.canvas.width, this.canvas.height);
+    this.decoder.move_pointer(0xffff, 0xffff);
     this.ctx.fillStyle = "#000";
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     this.callbacks.onTick(0);
@@ -202,7 +206,13 @@ export class RdpReplayPlayer {
     this.clockMs = now - this.wallStart;
 
     while (this.index < this.events.length && this.events[this.index].elapsedMs <= this.clockMs) {
-      this.apply(this.events[this.index]);
+      // One bad event shouldn't halt the raf loop.
+      try {
+        this.apply(this.events[this.index]);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("RDP replay: apply failed, skipping event", err);
+      }
       this.index += 1;
     }
 
@@ -232,7 +242,10 @@ export class RdpReplayPlayer {
         // Server only sends PositionPointer for its own moves; drive cursor from input.
         if (ev.x !== undefined && ev.y !== undefined) {
           const count = this.decoder.move_pointer(ev.x, ev.y);
-          if (count > 0) this.blitDirtyRects(count);
+          // expandBounds=false: cursor composite rects can extend slightly
+          // past the framebuffer (sprite at the desktop edge). Cursor
+          // position shouldn't define the recording's desktop bounds.
+          if (count > 0) this.blitDirtyRects(count, false);
         }
         break;
       case "keyboard":
@@ -243,7 +256,7 @@ export class RdpReplayPlayer {
     }
   };
 
-  private blitDirtyRects = (count: number) => {
+  private blitDirtyRects = (count: number, expandBounds = true) => {
     // Re-view: wasm-bindgen may reallocate linear memory between calls.
     const ptr = this.decoder.buffer_ptr();
     const len = this.decoder.buffer_len();
@@ -257,15 +270,17 @@ export class RdpReplayPlayer {
       const r = this.decoder.dirty_rect(i);
       if (r) {
         this.ctx.putImageData(fullImage, 0, 0, r.x, r.y, r.w, r.h);
-        const right = r.x + r.w;
-        const bottom = r.y + r.h;
-        if (right > this.contentMaxX) {
-          this.contentMaxX = right;
-          boundsExpanded = true;
-        }
-        if (bottom > this.contentMaxY) {
-          this.contentMaxY = bottom;
-          boundsExpanded = true;
+        if (expandBounds) {
+          const right = r.x + r.w;
+          const bottom = r.y + r.h;
+          if (right > this.contentMaxX) {
+            this.contentMaxX = right;
+            boundsExpanded = true;
+          }
+          if (bottom > this.contentMaxY) {
+            this.contentMaxY = bottom;
+            boundsExpanded = true;
+          }
         }
         r.free();
       }

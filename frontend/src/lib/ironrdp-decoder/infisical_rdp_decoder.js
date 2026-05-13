@@ -2,7 +2,6 @@
 
 export class DirtyRect {
     static __wrap(ptr) {
-        ptr = ptr >>> 0;
         const obj = Object.create(DirtyRect.prototype);
         obj.__wbg_ptr = ptr;
         DirtyRectFinalization.register(obj, obj.__wbg_ptr, obj);
@@ -74,14 +73,6 @@ export class DirtyRect {
 if (Symbol.dispose) DirtyRect.prototype[Symbol.dispose] = DirtyRect.prototype.free;
 
 /**
- * @enum {0 | 1}
- */
-export const PduAction = Object.freeze({
-    X224: 0, "0": "X224",
-    FastPath: 1, "1": "FastPath",
-});
-
-/**
  * A decoder session tied to a specific desktop size. Create one per
  * replay, feed PDUs in original order, read out the framebuffer + dirty
  * regions after each call.
@@ -134,7 +125,7 @@ export class RdpDecoder {
      * @returns {number}
      */
     feed(action, bytes) {
-        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+        const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_export);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.rdpdecoder_feed(this.__wbg_ptr, action, ptr0, len0);
         return ret >>> 0;
@@ -172,7 +163,7 @@ export class RdpDecoder {
      */
     constructor(width, height) {
         const ret = wasm.rdpdecoder_new(width, height);
-        this.__wbg_ptr = ret >>> 0;
+        this.__wbg_ptr = ret;
         RdpDecoderFinalization.register(this, this.__wbg_ptr, this);
         return this;
     }
@@ -194,65 +185,11 @@ export class RdpDecoder {
     }
 }
 if (Symbol.dispose) RdpDecoder.prototype[Symbol.dispose] = RdpDecoder.prototype.free;
-
-export function start() {
-    wasm.start();
-}
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
-        __wbg___wbindgen_throw_6b64449b9b9ed33c: function(arg0, arg1) {
+        __wbg___wbindgen_throw_9c31b086c2b26051: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
-        },
-        __wbg_log_0c201ade58bb55e1: function(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
-            let deferred0_0;
-            let deferred0_1;
-            try {
-                deferred0_0 = arg0;
-                deferred0_1 = arg1;
-                console.log(getStringFromWasm0(arg0, arg1), getStringFromWasm0(arg2, arg3), getStringFromWasm0(arg4, arg5), getStringFromWasm0(arg6, arg7));
-            } finally {
-                wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
-            }
-        },
-        __wbg_log_ce2c4456b290c5e7: function(arg0, arg1) {
-            let deferred0_0;
-            let deferred0_1;
-            try {
-                deferred0_0 = arg0;
-                deferred0_1 = arg1;
-                console.log(getStringFromWasm0(arg0, arg1));
-            } finally {
-                wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
-            }
-        },
-        __wbg_mark_b4d943f3bc2d2404: function(arg0, arg1) {
-            performance.mark(getStringFromWasm0(arg0, arg1));
-        },
-        __wbg_measure_84362959e621a2c1: function() { return handleError(function (arg0, arg1, arg2, arg3) {
-            let deferred0_0;
-            let deferred0_1;
-            let deferred1_0;
-            let deferred1_1;
-            try {
-                deferred0_0 = arg0;
-                deferred0_1 = arg1;
-                deferred1_0 = arg2;
-                deferred1_1 = arg3;
-                performance.measure(getStringFromWasm0(arg0, arg1), getStringFromWasm0(arg2, arg3));
-            } finally {
-                wasm.__wbindgen_free(deferred0_0, deferred0_1, 1);
-                wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
-            }
-        }, arguments); },
-        __wbindgen_init_externref_table: function() {
-            const table = wasm.__wbindgen_externrefs;
-            const offset = table.grow(4);
-            table.set(0, undefined);
-            table.set(offset + 0, undefined);
-            table.set(offset + 1, null);
-            table.set(offset + 2, true);
-            table.set(offset + 3, false);
         },
     };
     return {
@@ -263,20 +200,13 @@ function __wbg_get_imports() {
 
 const DirtyRectFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_dirtyrect_free(ptr >>> 0, 1));
+    : new FinalizationRegistry(ptr => wasm.__wbg_dirtyrect_free(ptr, 1));
 const RdpDecoderFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
-    : new FinalizationRegistry(ptr => wasm.__wbg_rdpdecoder_free(ptr >>> 0, 1));
-
-function addToExternrefTable0(obj) {
-    const idx = wasm.__externref_table_alloc();
-    wasm.__wbindgen_externrefs.set(idx, obj);
-    return idx;
-}
+    : new FinalizationRegistry(ptr => wasm.__wbg_rdpdecoder_free(ptr, 1));
 
 function getStringFromWasm0(ptr, len) {
-    ptr = ptr >>> 0;
-    return decodeText(ptr, len);
+    return decodeText(ptr >>> 0, len);
 }
 
 let cachedUint8ArrayMemory0 = null;
@@ -285,15 +215,6 @@ function getUint8ArrayMemory0() {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
     }
     return cachedUint8ArrayMemory0;
-}
-
-function handleError(f, args) {
-    try {
-        return f.apply(this, args);
-    } catch (e) {
-        const idx = addToExternrefTable0(e);
-        wasm.__wbindgen_exn_store(idx);
-    }
 }
 
 function passArray8ToWasm0(arg, malloc) {
@@ -319,12 +240,12 @@ function decodeText(ptr, len) {
 
 let WASM_VECTOR_LEN = 0;
 
-let wasmModule, wasm;
+let wasmModule, wasmInstance, wasm;
 function __wbg_finalize_init(instance, module) {
+    wasmInstance = instance;
     wasm = instance.exports;
     wasmModule = module;
     cachedUint8ArrayMemory0 = null;
-    wasm.__wbindgen_start();
     return wasm;
 }
 

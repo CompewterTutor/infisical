@@ -9,7 +9,7 @@ import {
   THttpEvent,
   TPamCommandLog,
   TPamSession,
-  TTerminalEvent,
+  TSessionEvent,
   useGetPamSessionLogs
 } from "@app/hooks/api/pam";
 import { useDecryptedSessionLogs } from "@app/hooks/api/pam/session-playback";
@@ -48,7 +48,8 @@ export const PamSessionLogsSection = ({ session, scrollToLogIndex }: Props) => {
     session.resourceType === PamResourceType.MySQL ||
     session.resourceType === PamResourceType.MsSQL ||
     session.resourceType === PamResourceType.MongoDB ||
-    session.resourceType === PamResourceType.Redis;
+    session.resourceType === PamResourceType.Redis ||
+    session.resourceType === PamResourceType.OracleDB;
   const isHttpSession = session.resourceType === PamResourceType.Kubernetes;
   const isAwsIamSession = session.resourceType === PamResourceType.AwsIam;
   const isRdpSession = session.resourceType === PamResourceType.Windows;
@@ -91,7 +92,7 @@ export const PamSessionLogsSection = ({ session, scrollToLogIndex }: Props) => {
       {isDatabaseSession && hasLogs && (
         <CommandLogView logs={logs as TPamCommandLog[]} scrollToLogIndex={scrollToLogIndex} />
       )}
-      {isSSHSession && hasLogs && <TerminalEventView events={logs as TTerminalEvent[]} />}
+      {isSSHSession && hasLogs && <TerminalEventView events={logs as TSessionEvent[]} />}
       {isHttpSession && hasLogs && <HttpEventView events={logs as THttpEvent[]} />}
       {isRdpSession && hasLogs && (
         <Suspense
@@ -103,7 +104,7 @@ export const PamSessionLogsSection = ({ session, scrollToLogIndex }: Props) => {
           }
         >
           <RdpReplayView
-            events={logs as TTerminalEvent[]}
+            events={logs as TSessionEvent[]}
             isStreaming={isLoading}
             totalDurationMs={isLegacyOrNoChunks ? undefined : playback.totalDurationMs}
           />

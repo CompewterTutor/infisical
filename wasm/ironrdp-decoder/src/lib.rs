@@ -10,8 +10,6 @@
 //! output matches what a live IronRDP client would render: bitmap RLE,
 //! RDP6 streams, pointer compositing -- all handled upstream.
 
-use std::sync::Arc;
-
 use ironrdp_connector::connection_activation::ConnectionActivationSequence;
 use ironrdp_connector::{BitmapConfig, Config, ConnectionResult, Credentials, DesktopSize};
 use ironrdp_graphics::image_processing::PixelFormat;
@@ -43,12 +41,6 @@ pub struct DirtyRect {
     pub y: u16,
     pub w: u16,
     pub h: u16,
-}
-
-#[wasm_bindgen]
-pub enum PduAction {
-    X224 = 0,
-    FastPath = 1,
 }
 
 #[wasm_bindgen]
@@ -99,22 +91,11 @@ impl RdpDecoder {
             1 => Action::FastPath,
             _ => return 0,
         };
-        self.last_dirty.clear();
         let outputs = match self.stage.process(&mut self.image, action, bytes) {
             Ok(o) => o,
             Err(_) => return 0,
         };
-        for out in outputs {
-            if let ActiveStageOutput::GraphicsUpdate(region) = out {
-                // InclusiveRectangle: left/top/right/bottom inclusive.
-                let x = region.left;
-                let y = region.top;
-                let w = region.right.saturating_sub(region.left).saturating_add(1);
-                let h = region.bottom.saturating_sub(region.top).saturating_add(1);
-                self.last_dirty.push(DirtyRect { x, y, w, h });
-            }
-        }
-        self.last_dirty.len() as u32
+        self.collect_dirty_rects(outputs)
     }
 
     /// Move the server-rendered pointer sprite to (x, y) and re-composite
@@ -127,7 +108,6 @@ impl RdpDecoder {
     /// on every mousemove. For replay we drive it from recorded input
     /// events so the cursor tracks the user's actual pointer path.
     pub fn move_pointer(&mut self, x: u16, y: u16) -> u32 {
-        self.last_dirty.clear();
         let event = FastPathInputEvent::MouseEvent(MousePdu {
             flags: PointerFlags::empty(),
             number_of_wheel_rotation_units: 0,
@@ -141,17 +121,28 @@ impl RdpDecoder {
             Ok(o) => o,
             Err(_) => return 0,
         };
+        self.collect_dirty_rects(outputs)
+    }
+
+    // InclusiveRectangle: left/top/right/bottom inclusive.
+    fn collect_dirty_rects(&mut self, outputs: Vec<ActiveStageOutput>) -> u32 {
+        self.last_dirty.clear();
+        let fb_w = self.image.width();
+        let fb_h = self.image.height();
         for out in outputs {
             if let ActiveStageOutput::GraphicsUpdate(region) = out {
-                let rx = region.left;
-                let ry = region.top;
-                let rw = region.right.saturating_sub(region.left).saturating_add(1);
-                let rh = region.bottom.saturating_sub(region.top).saturating_add(1);
+                // Drop rects entirely outside the framebuffer — cursor-restore
+                // at the off-screen prime (0xffff, 0xffff) would otherwise leak
+                // u16::MAX into bounds tracking and shrink the canvas to a
+                // tiny box.
+                if region.left >= fb_w || region.top >= fb_h {
+                    continue;
+                }
                 self.last_dirty.push(DirtyRect {
-                    x: rx,
-                    y: ry,
-                    w: rw,
-                    h: rh,
+                    x: region.left,
+                    y: region.top,
+                    w: region.right.saturating_sub(region.left).saturating_add(1),
+                    h: region.bottom.saturating_sub(region.top).saturating_add(1),
                 });
             }
         }
@@ -187,11 +178,6 @@ impl RdpDecoder {
     pub fn stride(&self) -> usize {
         self.image.stride()
     }
-}
-
-#[wasm_bindgen(start)]
-pub fn start() {
-    tracing_wasm::set_as_global_default();
 }
 
 /// Build a minimal Config for ConnectionActivationSequence. The sequence
@@ -234,10 +220,4 @@ fn stub_config(desktop_size: DesktopSize) -> Config {
         enable_server_pointer: true,
         pointer_software_rendering: true,
     }
-}
-
-// Silence unused Arc import in trimmed-down builds.
-#[allow(dead_code)]
-fn _assert_arc_used() {
-    let _: Arc<()> = Arc::new(());
 }
